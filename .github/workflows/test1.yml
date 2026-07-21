@@ -1,1 +1,21 @@
+name: forTest
 
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: self-hosted
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: run test
+        run: |
+          echo "=======it's a test========="
+          echo "run number=$GITHUB_RUN_NUMBER"
+          echo "run_id=$GITHUB_RUN_ID"
+          echo "hostname=$(hostname)"
+          echo "whoami=$(whoami)"
+          echo "pwd=$(pwd)"
