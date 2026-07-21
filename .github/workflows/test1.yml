@@ -18,5 +18,5 @@ jobs:
           echo "run_id=$GITHUB_RUN_ID"
           echo "hostname=$(hostname)"
           echo "whoami=$(whoami)"
-          echo "pwd=$(pwd)"
+          echo "curpath=$(pwd)"
           echo "------------------end"
