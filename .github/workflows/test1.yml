@@ -19,3 +19,4 @@ jobs:
           echo "hostname=$(hostname)"
           echo "whoami=$(whoami)"
           echo "pwd=$(pwd)"
+          echo "------------------end"
