@@ -1,6 +1,6 @@
 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIHY90D53tSq2Bwl9/0igM88JZnn4bE+GdbCkCRb45oG3 yuping
 ===>>>github自托管服务器的建立：
-建github_runner文件夹
+建github_runner文件夹并进入
 
 下载actions-runner-linux-x64-2.335.1.tar.gz：
 https://github.com/actions/runner/releases/download/v2.335.1/actions-runner-linux-x64-2.335.1.tar.gz
