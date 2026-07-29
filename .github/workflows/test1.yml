@@ -22,5 +22,8 @@ jobs:
           echo "whoami=$(whoami)"
           echo "curpath=$(pwd)"
           echo "---------------------------------------"
+          echo "Source branch commit ID: ${{ github.event.pull_request.head.sha }}"
+          echo "Target branch commit ID: ${{ github.event.pull_request.base.sha }}"
+          echo "=============================================="
           export -p
           echo "------------------end"
