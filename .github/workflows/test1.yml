@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: self-hosted
+    runs-on: ubuntu-22.04  # self-hosted
     steps:
       - name: checkout code
         uses: actions/checkout@v4
@@ -19,4 +19,6 @@ jobs:
           echo "hostname=$(hostname)"
           echo "whoami=$(whoami)"
           echo "curpath=$(pwd)"
+          echo "---------------------------------------"
+          export -p
           echo "------------------end"
