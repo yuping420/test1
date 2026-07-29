@@ -3,6 +3,8 @@ name: forTest
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
   build:
@@ -20,5 +22,10 @@ jobs:
           echo "whoami=$(whoami)"
           echo "curpath=$(pwd)"
           echo "---------------------------------------"
+          echo "Source branch commit ID: ${{ github.event.pull_request.head.sha }}"
+          echo "Target branch commit ID: ${{ github.event.pull_request.base.sha }}"
+          export GITHUB_BASE_SHA=${{ github.event.pull_request.base.sha }}
+          export GITHUB_HEAD_SHA=${{ github.event.pull_request.head.sha }}
+          echo "=============================================="
           export -p
           echo "------------------end"
