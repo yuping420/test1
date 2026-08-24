@@ -147,6 +147,10 @@ class RunSsmTestcases(GhRunCommon):
                         "args": self.datas[one_case][md][paras_disp],
                     }
 
+        if stream_cnt == 0:
+            mylog.output("ERROR: RunSsmTestcases::init_streams==0!!!")
+            return RET_ERR
+        
         self.sort_streams()
         self.init_stream_run_datas()
         return RET_OK
@@ -158,7 +162,18 @@ class RunSsmTestcases(GhRunCommon):
 
         md_dir = os.path.dirname(md_bin)
         md_name = os.path.basename(md_bin)
-        scmd = "cd {} && ./{} {} -f {}".format(md_dir, md_name, paras_orid, case)
+        case_name = os.path.basename(case)
+        scmd = ""
+        if case_name.startswith("kernel_multi"):
+            if md_name == MODEL_MAP_R[GFRUN]:
+                scmd = "cd {} && ./{} {} -s softcore.multiThreadNum=4 -f {}" \
+                       "".format(md_dir, md_name, paras_orid, case)
+            elif md_name == MODEL_MAP_R[GFSIM]:
+                add_paras = "--conf " + self.gh_env.code_path + "/configs/fourpe.conf"
+                scmd = "cd {} && ./{} {} {} -f {}".format(md_dir, md_name, paras_orid, add_paras, case)
+
+        if len(scmd) == 0:
+            scmd = "cd {} && ./{} {} -f {}".format(md_dir, md_name, paras_orid, case)
         return RET_OK, scmd
 
     def get_model_bin_in_build(self, md):
@@ -239,9 +254,7 @@ class RunSsmTestcases(GhRunCommon):
             add_infos = "cycles = {}".format(infos["cycle"])
         else:
             add_infos = None
-        mylog.output("stream: {} thread execution completed: {}({})" \
-                     "".format(stream_name, RES_MAP_R[res], add_infos))
-
+        mylog.output("{}: {}({})".format(stream_name, RES_MAP_R[res], add_infos))
         GhRunCommon.on_stream_end(self, paras, stream_name, trd_run_ctl)
         self.stream_run_datas2datas(stream_name)
         return
@@ -249,14 +262,14 @@ class RunSsmTestcases(GhRunCommon):
 
 if __name__ == "__main__":
     env = GhEnv()
-    env.init_for_debug()
+    ToolFuncs.init_env_for_debug()
     ret = env.init()
     if ret != RET_OK:
         print("GhEnv init failed.")
         sys.exit(1)
 
     rc_args = {
-        "gTimeout": env.datas["g_timeout"] * 60,
+        "gTimeout": env.datas["g_timeout"],
     }
     run_ctl = RunCtl(rc_args)
     run_ctl.start_trd()

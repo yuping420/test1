@@ -65,6 +65,7 @@ class GhRunCommon(GhRunBase):
         # 在执行日志中写入相关信息
         slog = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(st_time)) + ": EXE_begin"
         ToolFuncs.out_log(logfile, slog)
+        ToolFuncs.out_log(logfile, "Command: " + self.streams[stream_name]["cmd"])
         return RET_OK
 
     def on_stream_end(self, paras, stream_name, trd_run_ctl):

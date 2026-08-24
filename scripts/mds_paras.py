@@ -20,29 +20,29 @@ class ModelsParas:
         ToolFuncs.save_datas(self.datas, os.path.join(self.build_path, MODELS_RUN_PARAS_JSON))
         return RET_OK
 
-    # 从github触发的就配置文件化，以避免代码的修改
-    def init(self, in_args):
-        self.build_path = in_args["build_path"]
-        self.cfg_file = in_args["cfg_file"]
-        ret = self.init_datas()
-        if ret != RET_OK:
-            return ret
+    # # 从github触发的就配置文件化，以避免代码的修改
+    # def init(self, in_args):
+    #     self.build_path = in_args["build_path"]
+    #     self.cfg_file = in_args["cfg_file"]
+    #     ret = self.init_datas()
+    #     if ret != RET_OK:
+    #         return ret
         
-        self.init_cfg_ver()
-        ToolFuncs.save_datas(self.datas, os.path.join(self.build_path, MODELS_RUN_PARAS_JSON))
-        return RET_OK
+    #     self.init_cfg_ver()
+    #     ToolFuncs.save_datas(self.datas, os.path.join(self.build_path, MODELS_RUN_PARAS_JSON))
+    #     return RET_OK
 
-    def init_datas(self):
-        mp_file = os.path.join(MODELS_PARAS_ROOT, self.cfg_file)
-        if not os.path.exists(mp_file):
-            mylog.output("models_run_paras file not exist: %s" % mp_file)
-            return RET_ERR
+    # def init_datas(self):
+    #     mp_file = os.path.join("MODELS_PARAS_ROOT", self.cfg_file)  # 没用到预定义路径，先引号
+    #     if not os.path.exists(mp_file):
+    #         mylog.output("models_run_paras file not exist: %s" % mp_file)
+    #         return RET_ERR
 
-        self.datas = ToolFuncs.load_datas(mp_file)
-        if self.datas is None:
-            mylog.output("models_run_paras file load failed: %s" % mp_file)
-            return RET_ERR
-        return RET_OK
+    #     self.datas = ToolFuncs.load_datas(mp_file)
+    #     if self.datas is None:
+    #         mylog.output("models_run_paras file load failed: %s" % mp_file)
+    #         return RET_ERR
+    #     return RET_OK
 
     def init_cfg_ver(self):
         ver = self.datas.get("version", None)

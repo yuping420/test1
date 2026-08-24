@@ -7,25 +7,30 @@ import signal
 from const_def import *
 from gh_tools import *
 from mds_paras import ModelsParas
+from super_scalar_model_ctests import SuperScalarModelCtests
 from super_scalar_model_compile import SuperScalarModelCompile
 from run_ssm_testcases import RunSsmTestcases
 
 
 class GhTest:
+    # 要跑的模型及各模型要跑的参数
+    MODELS_PARAS = {
+        "gfrun": {
+            "": "nosoc"
+        },
+        "gfsim": {
+            "-s core.simtEnable=true": "nosoc"
+        }
+    }
+
     def __init__(self):
         self.env = None
         self.mds_paras = None
         self.run_ctl = None
+        self.ssmct = None
         self.ssmc = None
         self.rstc = None
-    
-    def sig_terminate_handler(self, signum, frame):
-        # github actions runner会多次下发
-        signal.signal(signal.SIGTERM, signal.SIG_IGN)
-        mylog.output("======>>>Get abort signal: %d" % signum)
-        # 要启动run_ctl后再截信号
-        self.run_ctl.set_run_ctl(RUN_CTL_STOP)
-        return
+        self.needs = None
 
     def init(self):
         # ToolFuncs.init_env_for_debug()  # --------for debug
@@ -34,12 +39,21 @@ class GhTest:
         if ret != RET_OK:
             return ret
     
+        # mp_args = {
+        #     "build_path": self.env.build_path,
+        #     "cfg_file": self.env.datas["mrp_json"],
+        # }
+        # self.mds_paras = ModelsParas()
+        # ret = self.mds_paras.init(mp_args)
+        # if ret != RET_OK:
+        #     return ret
+        # 2台self-hosted的runner，无法集中配置，改为代码配置
         mp_args = {
             "build_path": self.env.build_path,
-            "cfg_file": self.env.datas["mrp_json"],
+            "mds_paras": self.MODELS_PARAS,
         }
         self.mds_paras = ModelsParas()
-        ret = self.mds_paras.init(mp_args)
+        ret = self.mds_paras.init_lr(mp_args)
         if ret != RET_OK:
             return ret
 
@@ -51,8 +65,8 @@ class GhTest:
         signal.signal(signal.SIGTERM, self.sig_terminate_handler)
         return RET_OK
 
-    def run(self):
-        # 模型编译
+    # 模型编译
+    def model_compile(self):
         ss_args = {
             "gh_env": self.env,
             "run_ctl": self.run_ctl,
@@ -64,11 +78,11 @@ class GhTest:
         if ret != RET_OK:
             return ret
 
-        ret, needs = self.ssmc.need_test()
+        ret, self.needs = self.ssmc.need_test()
         if ret != RET_OK:
             return ret
 
-        if not needs:
+        if not self.needs:
             return RET_OK
 
         self.ssmc.run()
@@ -81,8 +95,44 @@ class GhTest:
                 for one_line in lines:
                     mylog.output(one_line.strip())
             return RET_ERR
+        return RET_OK
 
-        # 测例执行
+    def run_ctests(self):
+        ss_args = {
+            "gh_env": self.env,
+            "run_ctl": self.run_ctl,
+            "parrel_cnt": self.env.datas["parrel_cnt"],  # os.cpu_count()//2 - 1
+            "run_one_mins": 20,
+        }
+        self.ssmct = SuperScalarModelCtests()
+        ret = self.ssmct.init(ss_args)
+        if ret != RET_OK:
+            return ret
+
+        self.ssmct.run()
+        self.ssmct.wait_run_over()
+        self.ssmct.save_datas(SUPER_SCALAR_MODEL_CTESTS_JSON)
+        if self.ssmct.datas["info"]["result"] != EXE_PASS:
+            # 把执行日志输出到github页面
+            for one in self.ssmct.datas.keys():
+                if one == "info":
+                    continue
+
+                if self.ssmct.datas[one]["result"] != EXE_PASS:
+                    log = self.ssmct.datas[one]["log"]
+                    if os.path.exists(log):
+                        mylog.output("-" * 80)
+                        mylog.output("{} Failed: ".format(one))
+                        with open(log, "r") as f:
+                            lines = f.readlines()
+                            for one_line in lines:
+                                mylog.output(one_line.strip())
+                        mylog.output("-" * 80)
+            return RET_ERR
+        return RET_OK
+
+    # 测例执行
+    def run_testcases(self):
         rs_args = {
             "gh_env": self.env,
             "run_ctl": self.run_ctl,
@@ -102,6 +152,30 @@ class GhTest:
         if self.rstc.datas["info"]["result"] != EXE_PASS:
             return RET_ERR
         return RET_OK
+
+    def run(self):
+        ret = self.model_compile()
+        if ret != RET_OK:
+            return ret
+        
+        if not self.needs:
+            return RET_OK
+
+        ctests_ret = self.run_ctests()
+        tc_ret = self.run_testcases()
+        if ctests_ret != RET_OK:
+            return ctests_ret
+        if tc_ret != RET_OK:
+            return tc_ret
+        return RET_OK
+
+    def sig_terminate_handler(self, signum, frame):
+            # github actions runner会多次下发
+            signal.signal(signal.SIGTERM, signal.SIG_IGN)
+            mylog.output("======>>>Get abort signal: %d" % signum)
+            if self.run_ctl is not None:
+                self.run_ctl.set_run_ctl(RUN_CTL_STOP)
+            return
 
 
 if __name__ == "__main__":

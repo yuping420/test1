@@ -41,6 +41,10 @@ class GhTestcases:
         if case_list_file is None:
             mylog.output("ERROR: case_list_file is None: md={} evt={}".format(md, evt))
             return get_cases
+
+        if not os.path.exists(case_list_file):
+            mylog.output("ERROR: case_list_file not exists: {}".format(case_list_file))
+            return get_cases
         
         with open(case_list_file, "r") as f:
             lines = f.readlines()

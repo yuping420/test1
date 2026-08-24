@@ -96,7 +96,8 @@ class SuperScalarModelCompile(GhRunCommon):
             mylog.output("ERROR: unknown github event: %s" % evt)
             return RET_ERR, False
 
-        scmd = "cd {} && git diff --name-only {}...{}".format(self.model_path, base, head)
+        scmd = "cd {} && git fetch --all && git diff --name-only {}...{}" \
+               "".format(self.model_path, base, head)
         ret_dic = ToolFuncs.get_cmd_output(scmd)
         if ret_dic["ret_code"] != RET_OK:
             mylog.output("ERROR: git diff stderr:")
@@ -131,7 +132,7 @@ class SuperScalarModelCompile(GhRunCommon):
         return RET_OK, True
 
     def on_dispatcher_begin(self):
-        mylog.output("SuperScalarModelCompile begin..., please wait... ...")
+        mylog.output(">>>>>>>SuperScalarModelCompile begin..., please wait... ...")
         return GhRunCommon.on_dispatcher_begin(self)
 
     def on_dispatcher_end(self):
@@ -216,14 +217,14 @@ class SuperScalarModelCompile(GhRunCommon):
 
 if __name__ == "__main__":
     env = GhEnv()
-    env.init_for_debug()
+    ToolFuncs.init_env_for_debug()
     ret = env.init()
     if ret != RET_OK:
         print("GhEnv init failed.")
         sys.exit(1)
 
     rc_args = {
-        "gTimeout": env.datas["g_timeout"] * 60,
+        "gTimeout": env.datas["g_timeout"],
     }
     run_ctl = RunCtl(rc_args)
     run_ctl.start_trd()

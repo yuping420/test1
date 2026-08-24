@@ -1,5 +1,6 @@
 import os
 import sys
+import re
 import time
 import threading
 import json
@@ -9,6 +10,35 @@ from const_def import *
 
 
 class ToolFuncs:
+    @staticmethod
+    def create_build_path(build_path):
+        build_path = build_path.rstrip("/")
+        # 如果已存在，表明可能是用户在rerun，此时的目录名自动加后缀"_1"/"_2"/...
+        while True:
+            if not os.path.exists(build_path):
+                os.makedirs(build_path)
+                break
+
+            lst = re.findall(r"build_\d+_(\d+)", os.path.basename(build_path))
+            if len(lst) == 0:
+                build_path = build_path + "_1"
+            else:
+                pre_len = len(build_path)
+                out_len = len("_" + lst[0])
+                build_path = build_path[0 : pre_len - out_len]
+
+                pre_rno = int(lst[0])
+                build_path = build_path + "_{}".format(pre_rno + 1)
+        return build_path
+
+    @staticmethod
+    def get_build_no(build_path):
+        bname = os.path.basename(build_path)
+        lst = re.findall(r"build_(\d+)", bname)
+        if len(lst) == 0:
+            return RET_ERR, None
+        return RET_OK, int(lst[0])
+
     @staticmethod
     def get_cmd_output(cmd, expect_code=0, retry_times=3):
         ret_dic = {"ret_code": RET_OK, "stdout": None, "stderr": None}
@@ -54,7 +84,6 @@ class ToolFuncs:
     def load_datas(path_file, enc="utf-8"):
         with open(path_file, "r", encoding=enc) as fh:
             return json.load(fh)
-        return None
 
     @staticmethod
     def out_log(logfile, content):
@@ -141,9 +170,9 @@ class ToolFuncs:
         os.environ["GITHUB_BASE_SHA"] = "ghi789"
         #
         os.environ["MODELS_RUN_PARAS_JSON"] = "gh.json"
-        os.environ["GLOB_TIMEOUT"] = "20"
+        os.environ["GLOB_TIMEOUT"] = "60"
         os.environ["SELF_TIMEOUT"] = "20"
-        os.environ["PARREL_CNT"] = "5"
+        os.environ["PARREL_CNT"] = "10"
         return
 
 
@@ -257,10 +286,7 @@ class GhEnv:
         self.workspace_path = os.path.dirname(ghwk_path)
         self.build_no = int(bno)
         self.build_path = os.path.join(self.workspace_path, "build_" + str(self.build_no))
-        if not os.path.exists(self.build_path):
-            os.makedirs(self.build_path)
-            # 方便代码调试而改
-            # print("build path is exist, please check: %s" % self.build_path)
+        self.build_path = ToolFuncs.create_build_path(self.build_path)
 
         evt = os.environ.get("GITHUB_EVENT_NAME", "unkown")
         if evt not in ALL_EVENT_S:
@@ -295,9 +321,10 @@ class GhEnv:
             self.datas["g_timeout"] = int(g_timeout)
             self.datas["s_timeout"] = int(s_timeout)
             self.datas["parrel_cnt"] = int(parrel_cnt)
-        except:
+        except BaseException as ex:
             print("ERROR: please check paras: %s" % str([g_timeout, s_timeout, parrel_cnt]))
             return RET_ERR
+        self.output()
         return RET_OK
 
     def output(self):

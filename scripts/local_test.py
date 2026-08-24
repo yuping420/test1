@@ -4,6 +4,7 @@
 import os
 import sys
 import signal
+import time
 from const_def import *
 from gh_tools import *
 from mds_paras import ModelsParas
@@ -16,9 +17,9 @@ from gh_test import GhTest
 class LocalTest(GhTest):
     # 本地可修改的执行配置
     LOCAL_EVENT = "local_run"  # 或 "workflow_dispatch"
-    GLOB_TIMEOUT = 30  # 整体超时，单位：分钟
+    GLOB_TIMEOUT = 40  # 整体超时，单位：分钟
     SELF_TIMEOUT = 20  # 单个测例执行超时，单位：分钟
-    PARREL_CNT = 6     # 执行并发量
+    PARREL_CNT = 10     # 执行并发量
     # 要跑的模型及各模型要跑的参数
     MODELS_PARAS = {
         "gfrun": {
@@ -92,4 +93,3 @@ if __name__ == "__main__":
             
             lc_test.run_ctl.end_trd()
         sys.exit(EXE_STOP)
-        

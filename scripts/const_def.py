@@ -1,6 +1,7 @@
 #！/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+
 RET_OK = 0
 RET_ERR = 111
 
@@ -78,11 +79,11 @@ ALL_EVENT_S = [EVENT_MAP_R.get(evt) for evt in ALL_EVENT]
 
 # path, file, ...
 LOG_FILE = "run.log"
-ACTIONS_ROOT = "/home/yuping/github_runner"
-FILES_ROOT = ACTIONS_ROOT + "/files_root"
-MODELS_PARAS_ROOT = FILES_ROOT + "/models_run_paras"
-TESTCASES_ROOT = FILES_ROOT + "/testcases"
-NPU_BENCH_ROOT = TESTCASES_ROOT + "/npu_bench"
+# ACTIONS_ROOT = "/home/yuping/github_runner"
+# FILES_ROOT = ACTIONS_ROOT + "/files_root"
+# MODELS_PARAS_ROOT = FILES_ROOT + "/models_run_paras"
+# TESTCASES_ROOT = FILES_ROOT + "/testcases"
+# NPU_BENCH_ROOT = TESTCASES_ROOT + "/npu_bench"
 
 MODELS_RUN_PARAS_JSON = "models_run_paras.json"
 SUPER_SCALAR_MODEL_PATH_NAME = "SuperScalarModel"
@@ -92,3 +93,10 @@ SUPER_SCALAR_MODEL_COMPILE_LOG = "super_scalar_model_compile.log"
 SUPER_SCALAR_MODEL_BIN_BUILD_DIR = "super_scalar_model_models"
 TESTCASE_LOG_DIR = "testcase_logs"
 TESTCASE_LOG_JSON = "testcase_logs.json"
+
+# ctests
+SUPER_SCALAR_MODEL_CTESTS_JSON = "super_scalar_model_ctests.json"
+GCC_CTESTS_BUILD_DIR = "gcc_ctests"
+GCC_CTESTS_LOG = "gcc_ctests.log"
+CLANG_CTESTS_BUILD_DIR = "clang_ctests"
+CLANG_CTESTS_LOG = "clang_ctests.log"

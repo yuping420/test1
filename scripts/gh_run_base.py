@@ -344,9 +344,12 @@ class GhRunBase:
         elif fo == subprocess.DEVNULL:
             pass
         else:
-            if need_flush:
-                fo.flush()
-            fo.close()
+            try:
+                if need_flush:
+                    fo.flush()
+                fo.close()
+            except (ValueError, OSError):
+                pass
 
         if eo is fo:
             pass
@@ -356,9 +359,12 @@ class GhRunBase:
             elif eo == subprocess.DEVNULL:
                 pass
             else:
-                if need_flush:
-                    eo.flush()
-                eo.close()
+                try:
+                    if need_flush:
+                        eo.flush()
+                    eo.close()
+                except (ValueError, OSError):
+                    pass
         return
 
 
