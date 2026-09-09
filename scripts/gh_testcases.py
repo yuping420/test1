@@ -65,6 +65,24 @@ class GhTestcases:
         mylog.output("get_ssm_cases {} {} {}".format(md, evt, len(get_cases)))
         return get_cases
 
+    def get_prebuilt_cases(self):
+        cases_path = os.path.join(self.code_path, "tests/prebuilt-elf")
+        scmd = "cd {} && find . -name '*.elf'".format(cases_path)
+        ret_dic = ToolFuncs.get_cmd_output(scmd)
+        if ret_dic["ret_code"] != RET_OK:
+            mylog.output("ERROR: find prebuilt-elf stderr: {}".format(ret_dic["stderr"]))
+            return RET_ERR, []
+
+        outs = ret_dic["stdout"]
+        if len(outs) == 0:
+            mylog.output("ERROR: find prebuilt-elf stdout is empty!")
+            return RET_ERR, []
+        lines = outs.split("\n")
+        cases = [os.path.join(cases_path, one) for one in lines if len(one) > 0]
+        mylog.output("get_prebuilt_cases {}".format(len(cases)))
+        return RET_OK, cases
+
+
 
 if __name__ == "__main__":
     pass

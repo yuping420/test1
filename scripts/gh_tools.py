@@ -92,6 +92,26 @@ class ToolFuncs:
             fh.flush()
 
     @staticmethod
+    def github_clone(gh_url, parent_path, local_folder, brch="main"):
+        ret_dic = {"ret_code": RET_OK, "stdout": None, "stderr": None}
+        if os.path.exists(local_folder):
+            ret_dic["ret_code"] = RET_ERR
+            ret_dic["stderr"] = "github_clone parameter error."
+            return ret_dic
+
+        if os.path.exists(os.path.join(parent_path, local_folder)):
+            scmd = "cd %s && rm -rf %s && ls" % (parent_path, local_folder)
+            get_dic = ToolFuncs.get_cmd_output(scmd)
+            if get_dic["ret_code"] != RET_OK:
+                return get_dic
+        
+        if brch is None:
+            scmd = "cd %s && git clone %s %s" % (parent_path, gh_url, local_folder)
+        else:
+            scmd = "cd %s && git clone %s -b %s %s" % (parent_path, gh_url, brch, local_folder)
+        return ToolFuncs.get_cmd_output(scmd)
+
+    @staticmethod
     def summary_to_enhanced_table(data):
         # 准备表头
         headers = ["model.paras", "Pass", "Fail", "Timeout", "NoRun", "Pass Rate"]
@@ -157,7 +177,7 @@ class ToolFuncs:
     def init_env_for_debug():
         os.environ["GITHUB_WORKSPACE"] = "/home/yuping/github_runner/testdir/SuperScalarModel"
         os.environ["GITHUB_RUN_NUMBER"] = "1"
-        os.environ["GITHUB_EVENT_NAME"] = "push"  # "workflow_dispatch"
+        os.environ["GITHUB_EVENT_NAME"] = "push"  # "workflow_dispatch"  # "schedule"
         os.environ["GITHUB_ACTOR"] = "somebody"
         os.environ["GITHUB_ACTOR_ID"] = "1"
         os.environ["GITHUB_REF_NAME"] = "main"

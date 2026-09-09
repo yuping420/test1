@@ -20,7 +20,7 @@ class GhTest:
         },
         "gfsim": {
             "-s core.simtEnable=true": "nosoc"
-        }
+        },
     }
 
     def __init__(self):
@@ -147,8 +147,6 @@ class GhTest:
         self.rstc.run()
         self.rstc.wait_run_over()
         self.rstc.save_datas(TESTCASE_LOG_JSON)
-        sum_lines = ToolFuncs.summary_to_enhanced_table(self.rstc.datas["info"]["summary"])
-        mylog.output("Summary: \n" + sum_lines)
         if self.rstc.datas["info"]["result"] != EXE_PASS:
             return RET_ERR
         return RET_OK
@@ -169,13 +167,40 @@ class GhTest:
             return tc_ret
         return RET_OK
 
-    def sig_terminate_handler(self, signum, frame):
-            # github actions runner会多次下发
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            mylog.output("======>>>Get abort signal: %d" % signum)
-            if self.run_ctl is not None:
-                self.run_ctl.set_run_ctl(RUN_CTL_STOP)
+    # 最后汇总输出，方便用户统一查看结果
+    def last_outputs(self):
+        if self.ssmc is None:
             return
+        if not self.ssmc.need_test:
+            return
+
+        split_line_len = 90
+        mylog.output("-" * split_line_len)
+        mylog.output("-" * split_line_len)
+        if self.ssmc.datas["info"]["result"] != EXE_PASS:
+            mylog.output("Compile Result: %s" % RES_MAP_R[self.ssmc.datas["info"]["result"]])
+            return
+        mylog.output("Compile Result: PASS")
+
+        if self.ssmct is not None:
+            if self.ssmct.datas["gcc_ctests"]["result"] is not None:
+                mylog.output("ctests(GCC) Result: %s" % RES_MAP_R[self.ssmct.datas["gcc_ctests"]["result"]])
+            if self.ssmct.datas["clang_ctests"]["result"] is not None:
+                mylog.output("ctests(CLANG) Result: %s" % RES_MAP_R[self.ssmct.datas["clang_ctests"]["result"]])
+
+        if self.rstc is not None:
+            mylog.output("RunTestcases Result: %s" % RES_MAP_R[self.rstc.datas["info"]["result"]])
+            sum_lines = ToolFuncs.summary_to_enhanced_table(self.rstc.datas["info"]["summary"])
+            mylog.output("RunTestcases summary table: \n" + sum_lines)
+        return
+
+    def sig_terminate_handler(self, signum, frame):
+        # github actions runner会多次下发
+        signal.signal(signal.SIGTERM, signal.SIG_IGN)
+        mylog.output("======>>>Get abort signal: %d" % signum)
+        if self.run_ctl is not None:
+            self.run_ctl.set_run_ctl(RUN_CTL_STOP)
+        return
 
 
 if __name__ == "__main__":
@@ -185,5 +210,6 @@ if __name__ == "__main__":
         sys.exit(ret)
 
     ret = gh_test.run()
+    gh_test.last_outputs()
     gh_test.run_ctl.end_trd()
     sys.exit(ret)

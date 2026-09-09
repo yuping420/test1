@@ -99,6 +99,13 @@ class GhRunCommon(GhRunBase):
         self.streams[stream_name]["args"]["result"] = res
         return
 
+    # 模型名会改名（在前面加前缀），通过该函数获得原始名
+    def get_md_orid_name(self, md):
+        for one in NAME_RULES:
+            if md.startswith(one):
+                return md[len(one):]
+        return md
+
 
 if __name__ == "__main__":
     pass

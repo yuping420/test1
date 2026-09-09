@@ -4,7 +4,8 @@
 
 ## 执行
 
-在本地ubuntu开发环境中，在`SuperScalarModel`根目录下，执行`python3 ci_scripts/local_test.py`，可以对本地代码执行门禁测试。
+- 在本地ubuntu开发环境中，在`SuperScalarModel`根目录下，执行`python3 ci_scripts/local_test.py`，可以对本地代码执行门禁测试。
+- 在本地ubuntu开发环境中，在`SuperScalarModel`根目录下，执行`python3 ci_scripts/local_test_perf_compare.py`，可以对本地代码执行带性能比较功能的门禁测试。对于以下的`配置`，`日志查看`等内容，两者基本是一致的，所以下面以`local_test`来说明。
 
 ---
 

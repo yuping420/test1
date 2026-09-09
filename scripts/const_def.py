@@ -45,14 +45,20 @@ RUN_CTL_MAP_R = {v: k for k, v in RUN_CTL_MAP.items()}
 
 GFRUN = 101
 GFSIM = 103
+MAIN_GFRUN = 201
+MAIN_GFSIM = 203
 # DV121_GFSIM = 103
 MODEL_MAP = {
     "gfrun": GFRUN,
     "gfsim": GFSIM,
+    "main_gfrun": MAIN_GFRUN,
+    "main_gfsim": MAIN_GFSIM,
 }
 MODEL_MAP_R = {v: k for k, v in MODEL_MAP.items()}
-ALL_MODEL = [GFRUN, GFSIM]
+ALL_MODEL = [GFRUN, GFSIM, MAIN_GFRUN, MAIN_GFSIM]
 ALL_MODEL_S = [MODEL_MAP_R.get(model) for model in ALL_MODEL]
+NAME_RULE_MAIN = "main_"  # 在模型名前面加的前缀。原来还有"dv121_"
+NAME_RULES = [NAME_RULE_MAIN]
 
 # github event
 EVENT_PUSH = 220
@@ -78,6 +84,7 @@ ALL_EVENT = [
 ALL_EVENT_S = [EVENT_MAP_R.get(evt) for evt in ALL_EVENT]
 
 # path, file, ...
+SSM_GITHUB_HTTPS_URL = "https://github.com/LinxISA/SuperScalarModel.git"
 LOG_FILE = "run.log"
 # ACTIONS_ROOT = "/home/yuping/github_runner"
 # FILES_ROOT = ACTIONS_ROOT + "/files_root"
@@ -88,9 +95,14 @@ LOG_FILE = "run.log"
 MODELS_RUN_PARAS_JSON = "models_run_paras.json"
 SUPER_SCALAR_MODEL_PATH_NAME = "SuperScalarModel"
 # SUPER_SCALAR_MODEL_DV121_PATH_NAME = "SuperScalarModel_dv121"
-SUPER_SCALAR_MODEL_COMPILE_JSON = "super_scalar_model_compile.json"
 SUPER_SCALAR_MODEL_COMPILE_LOG = "super_scalar_model_compile.log"
+SUPER_SCALAR_MODEL_COMPILE_JSON = "super_scalar_model_compile.json"
 SUPER_SCALAR_MODEL_BIN_BUILD_DIR = "super_scalar_model_models"
+# 和main做性能对比
+SUPER_SCALAR_MODEL_MAIN_PATH_NAME = "SuperScalarModel_main"
+SUPER_SCALAR_MODEL_MAIN_COMPILE_LOG = "super_scalar_model_main_compile.log"
+SUPER_SCALAR_MODEL_MAIN_COMPILE_JSON = "super_scalar_model_main_compile.json"
+
 TESTCASE_LOG_DIR = "testcase_logs"
 TESTCASE_LOG_JSON = "testcase_logs.json"
 

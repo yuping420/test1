@@ -10,28 +10,43 @@ from gh_tools import *
 from mds_paras import ModelsParas
 from super_scalar_model_compile import SuperScalarModelCompile
 from run_ssm_testcases import RunSsmTestcases
-from gh_test import GhTest
+from gh_test_perf_compare import GhTestPerfCompare
 
 
-# 用于本地测试
-class LocalTest(GhTest):
+# 与main分支性能对比的本地测试
+class LocalTestPerfCompare(GhTestPerfCompare):
     # 本地可修改的执行配置
     LOCAL_EVENT = "local_run"  # 或 "workflow_dispatch"
     GLOB_TIMEOUT = 40  # 整体超时，单位：分钟
     SELF_TIMEOUT = 20  # 单个测例执行超时，单位：分钟
-    PARREL_CNT = 12     # 执行并发量
+    PARREL_CNT = 12    # 执行并发量
     # 要跑的模型及各模型要跑的参数
     MODELS_PARAS = {
         "gfrun": {
-            "": "nosoc"
+            "": "nosoc",
         },
         "gfsim": {
-            "-s core.simtEnable=true": "nosoc"
-        }
+            "-s core.simtEnable=true": "nosoc",
+        },
+        "main_gfrun": {
+            "": "nosoc",
+        },
+        "main_gfsim": {
+            "-s core.simtEnable=true": "nosoc",
+        },
+    }
+    # workflow_dispatch不跑main分支
+    MODELS_PARAS_SCHEDULE = {
+        "gfrun": {
+            "": "nosoc",
+        },
+        "gfsim": {
+            "-s core.soc_random=false": "nosoc",
+        },
     }
 
     def __init__(self):
-        GhTest.__init__(self)
+        GhTestPerfCompare.__init__(self)
 
     def set_test_env(self):
         os.environ["GITHUB_WORKSPACE"] = os.path.dirname(os.path.dirname(__file__))
@@ -42,33 +57,10 @@ class LocalTest(GhTest):
         os.environ["PARREL_CNT"] = str(self.PARREL_CNT)
         return
 
-    def init(self):
-        self.env = GhEnv()
-        ret = self.env.init()
-        if ret != RET_OK:
-            return ret
-    
-        mp_args = {
-            "build_path": self.env.build_path,
-            "mds_paras": self.MODELS_PARAS,
-        }
-        self.mds_paras = ModelsParas()
-        ret = self.mds_paras.init_lr(mp_args)
-        if ret != RET_OK:
-            return ret
-
-        rc_args = {
-            "gTimeout": self.env.datas["g_timeout"],
-        }
-        self.run_ctl = RunCtl(rc_args)
-        self.run_ctl.start_trd()
-        signal.signal(signal.SIGTERM, self.sig_terminate_handler)
-        return RET_OK
-
 
 if __name__ == "__main__":
     try:
-        lc_test = LocalTest()
+        lc_test = LocalTestPerfCompare()
         lc_test.set_test_env()
         ret = lc_test.init()
         if ret != RET_OK:
@@ -86,11 +78,12 @@ if __name__ == "__main__":
             if lc_test.rstc is not None:
                 lc_test.rstc.wait_run_over()
                 lc_test.rstc.save_datas(TESTCASE_LOG_JSON)
-                # sum_lines = ToolFuncs.summary_to_enhanced_table(lc_test.rstc.datas["info"]["summary"])
-                # mylog.output("Summary: \n" + sum_lines)
             elif lc_test.ssmct is not None:
                 lc_test.ssmct.wait_run_over()
                 lc_test.ssmct.save_datas(SUPER_SCALAR_MODEL_CTESTS_JSON)
+            elif lc_test.ssmmc is not None:
+                lc_test.ssmmc.wait_run_over()
+                lc_test.ssmmc.save_datas(SUPER_SCALAR_MODEL_MAIN_COMPILE_JSON)
             elif lc_test.ssmc is not None:
                 lc_test.ssmc.wait_run_over()
                 lc_test.ssmc.save_datas(SUPER_SCALAR_MODEL_COMPILE_JSON)

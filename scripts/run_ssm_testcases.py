@@ -19,6 +19,7 @@ class RunSsmTestcases(GhRunCommon):
         self.model_compile_datas = None
         self.run_models = None
         self.models_paras_datas = None
+        self.gtc = None
 
     def init(self, in_args):
         ret = GhRunCommon.init(self, in_args)
@@ -38,7 +39,15 @@ class RunSsmTestcases(GhRunCommon):
             return ret
         self.run_models = mp.get_run_model_names()
         self.models_paras_datas = mp.datas
-        print(self.models_paras_datas)
+        # print(self.models_paras_datas)
+
+        self.gtc = GhTestcases()
+        pass_args = {
+            "gh_env": self.gh_env,
+        }
+        ret = self.gtc.init(pass_args)
+        if ret != RET_OK:
+            return ret
 
         ret = self.init_datas()
         if ret != RET_OK:
@@ -67,20 +76,12 @@ class RunSsmTestcases(GhRunCommon):
             # "bm": None,
         }
 
-        gtc = GhTestcases()
-        pass_args = {
-            "gh_env": self.gh_env,
-        }
-        ret = gtc.init(pass_args)
-        if ret != RET_OK:
-            return ret
-
         logpath = os.path.join(self.build_path, TESTCASE_LOG_DIR)
         os.makedirs(logpath)
 
         evt = self.gh_env.datas["event"]
         for md in self.run_models:
-            cases = gtc.get_ssm_cases(md, evt)
+            cases = self.get_testcases(md, evt)
             if len(cases) == 0:
                 mylog.output("WARNING: no testcases when: %s %s" % (md, evt))
                 continue
@@ -118,6 +119,9 @@ class RunSsmTestcases(GhRunCommon):
                         return RET_ERR
         # print(self.datas)
         return RET_OK
+
+    def get_testcases(self, md, evt):
+        return self.gtc.get_ssm_cases(md, evt)
 
     def init_streams(self):
         self.streams = dict()
@@ -169,7 +173,8 @@ class RunSsmTestcases(GhRunCommon):
                 scmd = "cd {} && ./{} {} -s softcore.multiThreadNum=4 -f {}" \
                        "".format(md_dir, md_name, paras_orid, case)
             elif md_name == MODEL_MAP_R[GFSIM]:
-                add_paras = "--conf " + self.gh_env.code_path + "/configs/fourpe.conf"
+                # add_paras = "--conf " + self.gh_env.code_path + "/configs/fourpe.conf"
+                add_paras = "--conf " + self.model_compile_datas["info"]["root_path"] + "/configs/fourpe.conf"
                 scmd = "cd {} && ./{} {} {} -f {}".format(md_dir, md_name, paras_orid, add_paras, case)
 
         if len(scmd) == 0:
@@ -186,6 +191,10 @@ class RunSsmTestcases(GhRunCommon):
 
     def sort_streams(self):
         return RET_OK
+
+    def on_dispatcher_begin(self):
+        mylog.output(">>>>>>>RunTestcases begin..., please wait... ...")
+        return GhRunCommon.on_dispatcher_begin(self)
 
     def on_dispatcher_end(self):
         GhRunCommon.on_dispatcher_end(self)
@@ -220,15 +229,31 @@ class RunSsmTestcases(GhRunCommon):
         return
 
     def on_stream_end(self, paras, stream_name, trd_run_ctl):
+        res, infos = self.add_testcase_run_infos(paras, stream_name)
+        # 在CI执行日志中写入信息
+        md = self.streams[stream_name]["args"]["md"]
+        if self.get_md_orid_name(md) == MODEL_MAP_R[GFRUN]:
+            add_infos = "insts = {}".format(infos["inst_cnt"])
+        elif self.get_md_orid_name(md) == MODEL_MAP_R[GFSIM]:
+            add_infos = "cycles = {}".format(infos["cycle"])
+        else:
+            add_infos = None
+        mylog.output("{}: {}({})".format(stream_name, RES_MAP_R[res], add_infos))
+
+        GhRunCommon.on_stream_end(self, paras, stream_name, trd_run_ctl)
+        self.stream_run_datas2datas(stream_name)
+        return
+
+    def add_testcase_run_infos(self, paras, stream_name):
         res = paras["result"]  # 退出码决定的结果
         logfile = self.get_logfile(stream_name)
         # 到日志文件中抓指定数据写入datas
         md = self.streams[stream_name]["args"]["md"]
         logfile = self.get_logfile(stream_name)
         log_parser = ModelLogParser(md, logfile)
-        if md == MODEL_MAP_R[GFRUN]:
+        if self.get_md_orid_name(md) == MODEL_MAP_R[GFRUN]:
             infos = log_parser.get_gfrun_infos()
-        elif md == MODEL_MAP_R[GFSIM]:
+        elif self.get_md_orid_name(md) == MODEL_MAP_R[GFSIM]:
             infos = log_parser.get_gfsim_infos()
         else:
             infos = dict()
@@ -246,59 +271,8 @@ class RunSsmTestcases(GhRunCommon):
         else:
             # FAIL但数据全获取到了，也不改，因为退出码可能有问题
             pass
-
-        # 在CI执行日志中写入信息
-        if md == MODEL_MAP_R[GFRUN]:
-            add_infos = "insts = {}".format(infos["inst_cnt"])
-        elif md == MODEL_MAP_R[GFSIM]:
-            add_infos = "cycles = {}".format(infos["cycle"])
-        else:
-            add_infos = None
-        mylog.output("{}: {}({})".format(stream_name, RES_MAP_R[res], add_infos))
-        GhRunCommon.on_stream_end(self, paras, stream_name, trd_run_ctl)
-        self.stream_run_datas2datas(stream_name)
-        return
+        return res, infos
 
 
 if __name__ == "__main__":
-    env = GhEnv()
-    ToolFuncs.init_env_for_debug()
-    ret = env.init()
-    if ret != RET_OK:
-        print("GhEnv init failed.")
-        sys.exit(1)
-
-    rc_args = {
-        "gTimeout": env.datas["g_timeout"],
-    }
-    run_ctl = RunCtl(rc_args)
-    run_ctl.start_trd()
-
-    mp_args = {
-        "build_path": env.build_path,
-        "cfg_file": env.datas["mrp_json"],
-    }
-    mds_paras = ModelsParas()
-    ret = mds_paras.init(mp_args)
-    if ret != RET_OK:
-        mylog.output("ModelsParas init failed.")
-        sys.exit(1)
-
-    ss_args = {
-        "gh_env": env,
-        "run_ctl": run_ctl,
-        "parrel_cnt": env.datas["parrel_cnt"],
-        "run_one_mins": env.datas["s_timeout"],
-    }
-    sstc = RunSsmTestcases()
-    ret = sstc.init(ss_args)
-    if ret != RET_OK:
-        mylog.output("RunSsmTestcases init failed.")
-        sys.exit(1)
-    
-    # sstc.run_dispatcher()
-    sstc.run()
-    sstc.wait_run_over()
-    sstc.save_datas(TESTCASE_LOG_JSON)
-    run_ctl.end_trd()
-    sys.exit(0)
+    pass

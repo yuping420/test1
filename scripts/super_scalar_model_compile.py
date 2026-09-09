@@ -29,8 +29,8 @@ class SuperScalarModelCompile(GhRunCommon):
         self.model_path = os.path.join(self.workspace, SUPER_SCALAR_MODEL_PATH_NAME)
         self.build_path = self.gh_env.datas["build_path"]
         self.models_build_path = os.path.join(self.build_path, SUPER_SCALAR_MODEL_BIN_BUILD_DIR)
-        os.makedirs(self.models_build_path)
-        # dv121目录准备 todo
+        if not os.path.exists(self.models_build_path):  # main branch compile重载，故加判断
+            os.makedirs(self.models_build_path)
 
         mp = ModelsParas()
         ret = mp.init_from_json_of_build(self.build_path)
@@ -106,9 +106,9 @@ class SuperScalarModelCompile(GhRunCommon):
 
         output = ret_dic["stdout"]
         lines = output.split("\n")
-        mylog.output("git diff stdout:")
-        for one in lines:
-            mylog.output(one)
+        # mylog.output("git diff stdout:")
+        # for one in lines:
+        #     mylog.output(one)
 
         chg_files = []
         diss_folders = ["docs/", "archSpec/", "modelSpec/"]
@@ -137,17 +137,51 @@ class SuperScalarModelCompile(GhRunCommon):
 
     def on_dispatcher_end(self):
         GhRunCommon.on_dispatcher_end(self)
-
+        #
         if self.datas["bins_build"] is None:
             return
+        self.check_model_outs()
+        return
 
-        # 检查要跑的model是不是都编出来且拷贝过来了
+    def on_stream_end(self, paras, stream_name, trd_run_ctl):
+        logfile = self.get_logfile(stream_name)
+        err_msg = self.get_bins_zips(paras, stream_name)
+        if err_msg is not None:
+            ToolFuncs.out_log(logfile, "ERROR:" + err_msg)
+
+        err_msg = self.get_configs(paras, stream_name)
+        if err_msg is not None:
+            ToolFuncs.out_log(logfile, "ERROR:" + err_msg)
+        #
+        GhRunCommon.on_stream_end(self, paras, stream_name, trd_run_ctl)
+        mylog.output("stream: %s thread execution completed: %s" \
+                     "" % (stream_name, RES_MAP_R[paras["result"]]))
+        return
+
+    # 检查是否符合model的改名规则
+    def check_name_rule(self, md_name, name_rule):
+        if name_rule is None:
+            for r in NAME_RULES:
+                if md_name.startswith(r):
+                    # 要求不改名但实际改名了
+                    return False
+            return True
+
+        if md_name.startswith(name_rule):
+            return True
+        return False
+
+    def check_model_outs(self, name_rule=None):
+        # 检查要跑的model是不是都编出来且拷贝过来了。这里只检查没有改名的
         names = []
         for one in self.datas["bins_build"]:
             names.append(os.path.basename(one))
 
         no_bins = []
         for one in self.run_models:
+            if not self.check_name_rule(one, name_rule):
+                continue
+
             if one not in names:
                 no_bins.append(one)
 
@@ -158,20 +192,9 @@ class SuperScalarModelCompile(GhRunCommon):
                     " change result to FAIL".format(no_bins)
                 mylog.output(msg)
         return
-
-    def on_stream_end(self, paras, stream_name, trd_run_ctl):
-        logfile = self.get_logfile(stream_name)
-        err_msg = self.get_bins_zips(paras, stream_name)
-        if err_msg is not None:
-            ToolFuncs.out_log(logfile, "ERROR:" + err_msg)
-        #
-        GhRunCommon.on_stream_end(self, paras, stream_name, trd_run_ctl)
-        mylog.output("stream: %s thread execution completed: %s" \
-                     "" % (stream_name, RES_MAP_R[paras["result"]]))
-        return
         
     # zip从来没用过，故这里不再处理
-    def get_bins_zips(self, paras, stream_name):
+    def get_bins_zips(self, paras, stream_name, name_rule=None):
         msg = None
         stm_res = paras["result"]
         if stream_name == "model_compile":
@@ -198,10 +221,16 @@ class SuperScalarModelCompile(GhRunCommon):
         # 只拷贝本次要跑的bin到build_path
         for one in get_bins:
             bin_name = os.path.basename(one)
+            # 改名处理
+            if name_rule is None:
+                pass
+            else:
+                bin_name = name_rule + bin_name
+
             if bin_name not in self.run_models:
                 continue
 
-            scmd = "cp -f {} {}".format(one, self.models_build_path)
+            scmd = "cp -f {} {}/{}".format(one, self.models_build_path, bin_name)
             ret = os.system(scmd)
             if ret != 0:
                 msg = "stream %s: bin copy failed. cmd: %s" % (stream_name, scmd)
@@ -213,6 +242,16 @@ class SuperScalarModelCompile(GhRunCommon):
             else:
                 self.datas["bins_build"].append(os.path.join(self.models_build_path, bin_name))
         return msg
+
+    def get_configs(self, paras, stream_name):
+        src = os.path.join(self.model_path, "configs")
+        scmd = "cp -rf {} {}/".format(src, self.models_build_path)
+        ret = os.system(scmd)
+        if ret != 0:
+            msg = "stream %s: configs copy failed. cmd: %s" % (stream_name, scmd)
+            paras["result"] = EXE_FAIL
+            return msg
+        return None
 
 
 if __name__ == "__main__":
