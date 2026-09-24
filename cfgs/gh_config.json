@@ -1,0 +1,33 @@
+{
+    "version": 1,
+    "machine": {
+        "parrel_cnt": 16
+    },
+    "event_control": {
+        "pull_request": {
+            "glob_timeout": 60,
+            "self_timeout": 5,
+            "models_paras": "pr.json"
+        },
+        "push": {
+            "glob_timeout": 50,
+            "self_timeout": 5,
+            "models_paras": "push.json"
+        },
+        "schedule": {
+            "glob_timeout": 420,
+            "self_timeout": 30,
+            "models_paras": "sckedule.json"
+        },
+        "workflow_dispatch": {
+            "glob_timeout": 420,
+            "self_timeout": 30,
+            "models_paras": "default.json"
+        }
+    },
+    "auto_update_pass_list": {
+        "opened": true,
+        "method": "all_new",
+        "timeout": 1
+    }
+}
