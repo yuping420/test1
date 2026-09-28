@@ -1,56 +1,33 @@
-name: HTML Preview Demo
-on:
-  push:
-    branches: [mybranch]
-  pull_request:
-    types: [opened, synchronize]
+name: Cppcheck Report
+on: [push
+]
 
 jobs:
-  preview:
+  cppcheck:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # 步骤1：生成一个简单的HTML报告（你可以替换成自己的测试/分析命令）
-      - name: Generate Demo HTML Report
+      - name: Install Cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+
+      - name: Run Cppcheck
         run: 
-          |
-          mkdir -p my-report
-          cat > my-report/index.html << 'EOF'
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <title>CI 生成的测试报告</title>
-            <style>
-              body { font-family: system-ui; max-width: 800px; margin: 40px auto; padding: 20px; }
-              h1 { color: #2563eb; }
-              .success { color: #16a34a; font-weight: bold; }
-            </style>
-          </head>
-          <body>
-            <h1>✅ 这是 GitHub Actions 自动生成的预览报告</h1>
-            <p class="success">无需下载，直接在浏览器中打开查看！</p>
-            <p>生成时间：${{ github.event.head_commit.timestamp }}</p>
-            <p>提交哈希：${{ github.sha }}</p>
-          </body>
-          </html>
-          EOF
+|
+          cppcheck --enable=all --output-file=cppcheck_report.txt --error-exitcode=1 src 2>&1 | tee cppcheck_output.log
+        continue-on-error: true  # 即使发现问题也继续生成报告
 
-      # 步骤2：使用 html-preview-action 生成在线预览链接
-      - name: Upload and Preview HTML
-        id: html_preview
-        uses: pavi2410/html-preview-action@v4
-        with:
-          html_file: 'my-report/index.html'  # 指定你的入口HTML文件
-          job_summary: true                 # 自动在Actions运行摘要里显示预览链接
+      - name: Install cppcheck-htmlreport
+        run: pip install cppcheck-htmlreport
 
-      # 可选步骤：把预览链接自动评论到PR里
-      - name: Comment Preview URL on PR
-        uses: peter-evans/create-or-update-comment@v4
-        if: github.event_name == 'pull_request'
+      - name: Generate HTML report
+        run: 
+|
+          mkdir -p cppcheck_html_report
+          cppcheck-htmlreport --file=cppcheck_report.txt --report-dir=cppcheck_html_report --source-dir=.
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
         with:
-          issue-number: ${{ github.event.pull_request.number }}
-          body: 
-            |
-            🎉 你的HTML报告预览已生成：
-            ${{ steps.html_preview.outputs.url }}
+          name: cppcheck-html-report
+          path: cppcheck_html_report/

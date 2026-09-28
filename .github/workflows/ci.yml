@@ -1,0 +1,31 @@
+name: ci test
+
+on:
+  pull_request:
+    branches: [ci_scripts]
+  push:
+    branches: [ci_scripts]
+  schedule:
+    - cron: '0 18 * * *'  # daily 18:00 UTC (02:00 CST) — run the heavy/nightly pass-list tier
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  run-tests:
+    runs-on: [self-hosted, linux]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: compile and run tests
+        env:
+          GITHUB_SHA_BEFORE: ${{ github.event.before }}
+          GLOB_TIMEOUT: 30
+          SELF_TIMEOUT: 20
+          PARREL_CNT: 8
+          MODELS_RUN_PARAS_JSON: "gh.json"
+        run: |
+          python3 -u ci_scripts/gh_test.py
