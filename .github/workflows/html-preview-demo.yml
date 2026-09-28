@@ -1,6 +1,5 @@
-name: Cppcheck Report
-on: [push
-]
+name: test Report
+on: [push]
 
 jobs:
   cppcheck:
@@ -8,26 +7,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Cppcheck
-        run: sudo apt-get update && sudo apt-get install -y cppcheck
-
-      - name: Run Cppcheck
-        run: 
-|
-          cppcheck --enable=all --output-file=cppcheck_report.txt --error-exitcode=1 src 2>&1 | tee cppcheck_output.log
-        continue-on-error: true  # 即使发现问题也继续生成报告
-
-      - name: Install cppcheck-htmlreport
-        run: pip install cppcheck-htmlreport
-
       - name: Generate HTML report
         run: 
-|
-          mkdir -p cppcheck_html_report
-          cppcheck-htmlreport --file=cppcheck_report.txt --report-dir=cppcheck_html_report --source-dir=.
+          mkdir -p html_report
+          echo "<h1>Hello Report</h1><p>This is a test.</p>" > html_report/index.html
 
       - name: Upload HTML report
         uses: actions/upload-artifact@v4
         with:
-          name: cppcheck-html-report
-          path: cppcheck_html_report/
+          name: html_report
+          path: html_report/
