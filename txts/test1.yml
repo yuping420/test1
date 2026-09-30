@@ -1,0 +1,20 @@
+name: forTest
+
+on:
+  push:
+    branches: ["main", "mybranch"]
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04  # self-hosted
+    steps:
+      - name: checkout code
+        uses: actions/checkout@v4
+
+      - name: run test
+        run: |
+          echo "=======python script begin========="
+          python3 scripts/gh_run_base.py
+          echo "------------------end"

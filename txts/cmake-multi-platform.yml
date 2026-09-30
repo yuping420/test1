@@ -1,0 +1,96 @@
+# This starter workflow is for a CMake project running on multiple platforms. There is a different starter workflow if you just want a single platform.
+# See: https://github.com/actions/starter-workflows/blob/main/ci/cmake-single-platform.yml
+name: CMake on Linux
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    runs-on: [self-hosted, linux]
+    outputs:
+      run_build: ${{ steps.filter.outputs.run_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          # New branch / force-push has no usable base -> run build to be safe.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+            echo "No base commit to diff; will run build."
+            exit 0
+          fi
+          # Files changed on this branch since the merge base, excluding doc-only paths.
+          CHANGED=$(git diff --name-only "${BASE}...${HEAD}" 2>/dev/null || true)
+          NON_DOC=$(echo "$CHANGED" | grep -vE '^(docs/|archSpec/|modelSpec/)' | grep -v '^$' || true)
+          if [ -z "$NON_DOC" ]; then
+            echo "run_build=false" >> "$GITHUB_OUTPUT"
+            echo "Doc-only changes; skipping build/test."
+          else
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+            echo "Non-doc files changed; will run build/test."
+            echo "$NON_DOC" | sed 's/^/  /'
+          fi
+
+  build:
+    needs: changes
+    if: always() && ((needs.changes.result != 'success') || (needs.changes.outputs.run_build == 'true'))
+    runs-on: [self-hosted, linux]
+
+    strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+
+      # Run Release builds with GCC and Clang on Ubuntu.
+      matrix:
+        build_type: [Release]
+        compiler:
+          - { c: gcc, cxx: g++ }
+          - { c: clang, cxx: clang++ }
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set reusable strings
+      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
+      id: strings
+      shell: bash
+      run: |
+        echo "build-output-dir=${{ runner.temp }}/build" >> "$GITHUB_OUTPUT"
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: >
+        cmake -B ${{ steps.strings.outputs.build-output-dir }}
+        -DCMAKE_CXX_COMPILER=${{ matrix.compiler.cxx }}
+        -DCMAKE_C_COMPILER=${{ matrix.compiler.c }}
+        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+        -DBUILD_TESTS=ON
+        -S ${{ github.workspace }}
+
+    - name: Build
+      run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --config ${{ matrix.build_type }}
+
+    - name: Test
+      working-directory: ${{ steps.strings.outputs.build-output-dir }}
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest --build-config ${{ matrix.build_type }} --output-on-failure

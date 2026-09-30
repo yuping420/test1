@@ -27,3 +27,42 @@ sudo ./svc.sh uninstall
 然后会要求输入remove token，该token通过如下命令得到：
 curl -L -X POST -H "Accept: application/vnd.github+json" -H "Authorization: Bearer 个人PAT" -H "X-GitHub-Api-Version: 2022-11-28" https://api.github.com/repos/yuping420/test1/actions/runners/remove-token -k
 注意：                                                                                                                             这里是项目地址有关         
+
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------
+配socks5代理走阿里云服务器
+1, 阿里云 SSH 服务正常。 一般是可以ssh直连的
+
+2, 在你的本地电脑（Windows/Mac/Linux）终端中执行以下命令，建立一个 SOCKS5 代理隧道。为以后能更方便地管理隧道，建议在建立隧道时指定一个控制套接字文件：
+ssh -D 10856 -fN -M -S ~/.ssh/github_tunnel.sock root@公网ip
+-D 10856：在本地电脑的 127.0.0.1:10856 端口开启一个 SOCKS5 代理服务。
+-f：后台运行，不占用当前终端窗口。
+-N：不执行远程命令，只用于端口转发。
+-M: 启用主模式控制套接字。
+-S: 指定套接字文件路径。
+这样在需要关闭该隧道时就可以如下：
+ssh -S ~/.ssh/github_tunnel.sock -O exit root@你的阿里云公网IP
+ssh -S ~/.ssh/github_tunnel.sock -O exit root@公网ip
+===》注意：SSH 隧道可能会因网络波动断开，此时通常会导致本地发起隧道的 ssh 客户端进程退出，故可以改为autossh启动。
+---》windows上时启动卡住了，没有让输密码，只能在wsl上启动，然后在powershell上配了git的http_proxy/https_proxy后就可以git clone，因为他们共享网络配置
+
+
+3， 配置 Git 使用本地的 SOCKS5 代理
+# 配置 HTTPS 协议的 Git 请求走 SOCKS5 代理
+git config --global http.proxy socks5://127.0.0.1:1080
+git config --global https.proxy socks5://127.0.0.1:1080
+# 如果你习惯用 git@github.com (SSH 协议)，还需要配置 SSH 客户端 -----为配置简单点，没配这里
+# 编辑 ~/.ssh/config (Windows 在 C:\Users\用户名\.ssh\config)
+Host github.com
+    User git
+    Hostname github.com
+    ProxyCommand nc -X 5 -x 127.0.0.1:1080 %h %p
+    # 如果 nc 不支持 -X 参数（如 Windows 某些版本），可使用 connect-proxy 或改用 HTTPS 方式 clone
+4，配置socks5代理的环境变量：
+ubuntu：vim ~/.bashrc
+在最后增加两行：
+export HTTP_PROXY=socks5://127.0.0.1:10856
+export HTTPS_PROXY=socks5://127.0.0.1:10856
+source ~/.bashrc
+gh命令行，github自托管服务器中的actions runner都是走https端口443与github服务器通信的。
+Windows‌: 可以通过系统设置 -> 环境变量 -> 用户变量中添加 HTTP_PROXY 和 HTTPS_PROXY
+如果想仅github走这个代理，别的还是直连？

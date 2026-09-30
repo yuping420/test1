@@ -1,0 +1,115 @@
+name: gfsim CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 18 * * *'  # daily 18:00 UTC (02:00 CST) — run the heavy/nightly pass-list tier
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changes:
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+    runs-on: [self-hosted, linux]
+    outputs:
+      run_build: ${{ steps.filter.outputs.run_build }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: filter
+        shell: bash
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+            HEAD="${{ github.event.pull_request.head.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+            HEAD="${{ github.sha }}"
+          fi
+          # New branch / force-push has no usable base -> run build to be safe.
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ]; then
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+            echo "No base commit to diff; will run build."
+            exit 0
+          fi
+          # Files changed on this branch since the merge base, excluding doc-only paths.
+          CHANGED=$(git diff --name-only "${BASE}...${HEAD}" 2>/dev/null || true)
+          NON_DOC=$(echo "$CHANGED" | grep -vE '^(docs/|archSpec/|modelSpec/)' | grep -v '^$' || true)
+          if [ -z "$NON_DOC" ]; then
+            echo "run_build=false" >> "$GITHUB_OUTPUT"
+            echo "Doc-only changes; skipping build/test."
+          else
+            echo "run_build=true" >> "$GITHUB_OUTPUT"
+            echo "Non-doc files changed; will run build/test."
+            echo "$NON_DOC" | sed 's/^/  /'
+          fi
+
+  gfsim-tests:
+    needs: changes
+    if: always() && (github.event_name == 'pull_request' || github.event_name == 'push') && ((needs.changes.result != 'success') || (needs.changes.outputs.run_build == 'true'))
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build gfsim
+        run: |
+          python3 build.py all -O O2 --build-dir ${{ runner.temp }}/ssm_build -j$(nproc)
+
+      - name: Run gfsim pass list
+        run: |
+          set +e
+          PASS=0
+          FAIL=0
+          FAILED_TESTS=""
+          while IFS= read -r line; do
+            # Skip comments and blank lines
+            line=$(echo "$line" | sed 's/#.*//; s/[[:space:]]*$//')
+            [ -z "$line" ] && continue
+            elf="$line"
+            name=$(basename "$elf" .elf)
+            # The checked-in pass-list ELFs use the legacy PTO ISA v0.1 Tile encoding.
+            output=$(bin/gfsim -f "$elf" --pto-v02 false 2>&1)
+            rc=$?
+            if [ $rc -eq 0 ]; then
+              cycles=$(echo "$output" | grep "Total Cycles" | head -1 | grep -o '[0-9]*$')
+              echo "PASS  $name  cycles=$cycles"
+              PASS=$((PASS+1))
+            else
+              echo "FAIL  $name  (rc=$rc)"
+              FAIL=$((FAIL+1))
+              FAILED_TESTS="$FAILED_TESTS $name"
+            fi
+          done < tests/gfsim-pass-list.txt
+          echo ""
+          echo "========================================="
+          echo "  PASS: $PASS  FAIL: $FAIL  TOTAL: $((PASS+FAIL))"
+          echo "========================================="
+          if [ $FAIL -gt 0 ]; then
+            echo "Failed tests:$FAILED_TESTS"
+            exit 1
+          fi
+
+  nightly-tests:
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: [self-hosted, linux]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build gfsim
+        run: |
+          python3 build.py all -O O2 --build-dir ${{ runner.temp }}/ssm_build -j$(nproc)
+
+      - name: Run gfsim nightly (heavy) pass-list tier
+        run: |
+          python3 scripts/ci_self_test.py --tool gfsim --pass-list tests/gfsim-pass-list-nightly.txt --pto-v02 false --timeout 600
