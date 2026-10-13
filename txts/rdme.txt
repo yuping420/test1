@@ -90,3 +90,12 @@ unzip fastgithub_linux-x64.zip
 cd fastgithub_linux-x64
 因为是docker，没有systemctl，就不能这样：sudo ./fastgithub start，sudo ./fastgithub stop 来启动停止
 直接进程方式：nohup ./fastgithub & , 再kill进程
+
+#######################################################
+更多的开源代理方案：
+多协议代理框架	Xray-core / v2ray-core	Linux 服务器、旁路由、网关级代理，支持 VLESS、Trojan、Reality 等协议。
+规则代理客户端	Clash / Clash Meta / mihomo	按域名分流，适合桌面端、服务器、旁路由。
+现代代理核心	sing-box	跨平台代理核心，适合容器、Linux、网关。
+弱网加速代理	Hysteria2 / TUIC	基于 QUIC，适合丢包高、延迟高的链路。
+SOCKS5 代理	Shadowsocks / Shadowsocks-rust	轻量代理，但单纯 SS 已不算隐蔽性强的方案。
+匿名网络	Tor / I2P / Freenet	更偏匿名通信，不适合 Git、CI、容器镜像这类开发工作流。
