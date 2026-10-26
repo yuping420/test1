@@ -21,6 +21,7 @@ jobs:
           echo "hostname=$(hostname)"
           echo "whoami=$(whoami)"
           echo "curpath=$(pwd)"
+          echo "github_output=$(GITHUB_OUTPUT)"
           echo "---------------------------------------"
           echo "Source branch commit ID: ${{ github.event.pull_request.head.sha }}"
           echo "Target branch commit ID: ${{ github.event.pull_request.base.sha }}"
