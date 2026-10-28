@@ -13,7 +13,7 @@ jobs:
       - name: checkout code
         uses: actions/checkout@v4
 
-      - name: run test
+      - name: output environ variable
         run: |
           echo "=======it's a test========="
           echo "run number=$GITHUB_RUN_NUMBER"
@@ -27,6 +27,14 @@ jobs:
           echo "Target branch commit ID: ${{ github.event.pull_request.base.sha }}"
           export GITHUB_BASE_SHA=${{ github.event.pull_request.base.sha }}
           export GITHUB_HEAD_SHA=${{ github.event.pull_request.head.sha }}
-          echo "=============================================="
-          export -p
-          echo "------------------end"
+          # echo "=============================================="
+          # export -p
+          # echo "=============================================="
+          echo "output------------------end"
+    
+      - name: run scripts
+        id: run-scripts
+        run: python3 -u scripts/actions_test.py
+      
+      - name: output return values
+        run: echo ${{ steps.run-script.outputs.build_path }}
