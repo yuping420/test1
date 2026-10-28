@@ -39,3 +39,9 @@ jobs:
       - name: output return values
         run: |
           echo ${{ steps.run-scripts.outputs.build_path }}
+      
+      - name: upload report
+        uses: actions/upload-artifact@v4
+        with:
+          name: report
+          path: ${{ steps.run-scripts.outputs.build_path }}
