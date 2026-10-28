@@ -45,6 +45,6 @@ jobs:
         with:
           name: report
           path: |
-            ${{ steps.run-scripts.outputs.build_path }}
+            ${{ steps.run-scripts.outputs.build_path }}/
             "!${{ steps.run-scripts.outputs.build_path }}/*.json"
           retention-days: 2        # 2天后自动删除
