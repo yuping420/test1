@@ -37,4 +37,5 @@ jobs:
         run: python3 -u scripts/actions_test.py
       
       - name: output return values
-        run: echo ${{ steps.run-script.outputs.build_path }}
+        run: |
+          echo ${{ steps.run-scripts.outputs.build_path }}
