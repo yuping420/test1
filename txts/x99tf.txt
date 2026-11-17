@@ -20,3 +20,16 @@ sudo apt update
 sudo apt install nvidia-driver-535
 sudo reboot
 装好后nvidia-smi能正常输出信息，就说明驱动OK了。‌‌
+
+
+本地轻量图形栈+完整浏览器（接显示器用）
+如果需要正常浏览带JS、视频的现代网页，只需要补一套最小化的本地图形环境，不用装完整GNOME桌面。
+1.
+安装基础Xorg图形服务器和轻量窗口管理器：
+1
+sudo apt install xorg openbox chromium-browser
+2.
+直接在tty终端里启动图形会话：
+输入命令 startx，系统会拉起极简的Openbox窗口管理器，自动弹出Chromium浏览器窗口。
+3.
+全程内存占用仅300MB左右，远低于完整桌面环境，完全不影响大模型后台服务的运行。
