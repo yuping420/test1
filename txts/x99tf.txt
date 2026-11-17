@@ -1,21 +1,22 @@
-大内存核心BIOS设置项
-‌内存容量识别开关‌
-进入「Advanced/高级」→「芯片组配置」，找到‌Memory Remap Feature（内存重映射）‌选项，将其设置为‌Enabled‌。
-该选项是大内存识别的核心，开启后可以让系统绕过32位地址空间限制，完整识别64GB以上的大容量内存。
+32g内存，在bios的memory选项有个POR的菜单里的第一项要改为disable
 
-‌内存模式与通道设置‌
-在「高级」→「内存配置」菜单中，将‌Memory Mode（内存模式）‌设置为‌4-Channel（四通道）‌。
-华南X99TF配备8条DIMM插槽，支持四通道架构，插满8条16GB内存即可跑满128GB总容量。
-
-‌内存频率与兼容性设置‌
-在「内存配置」中找到内存频率选项，根据内存规格选择对应档位：
-
-DDR4内存选‌2133/2400MHz‌
-DDR3内存选‌1600/1866MHz‌
-不要强行设置超过内存标称的频率，避免大内存出现识别不稳定的问题。
-‌ECC内存兼容开关‌
-如果使用服务器ECC大内存，在「高级」→「CPU配置」中找到‌ECC Function‌选项，设置为‌Enabled‌，即可开启ECC纠错功能，提升大内存长时间运行的稳定性。
-
-‌CSM兼容模块设置‌
-进入「Boot/启动」菜单，找到‌CSM Support（兼容支持模块）‌选项，设置为‌Enabled‌。
-关闭安全启动选项，避免部分大容量内存因UEFI校验限制无法被系统完整识别。
+UEFI+GPT配置正确，但依然黑屏（大概率是显卡驱动问题）‌
+按下面步骤操作：
+1.
+‌临时进入系统‌：开机在GRUB菜单按e键编辑启动项，找到以linux开头的那一行，在末尾加上nomodeset，然后按F10或Ctrl+X启动。
+2.
+‌永久修复‌：进入系统后打开终端，编辑GRUB配置文件：
+bash
+sudo nano /etc/default/grub
+找到GRUB_CMDLINE_LINUX_DEFAULT="quiet splash"，改成GRUB_CMDLINE_LINUX_DEFAULT="quiet splash nomodeset"，保存退出，然后执行：
+bash
+sudo update-grub
+sudo reboot
+这样就能正常进桌面了。
+3.
+‌装显卡驱动‌：进桌面后，打开“软件和更新”里的“附加驱动”选项卡，选一个推荐的NVIDIA驱动版本安装，或者用命令行：
+bash
+sudo apt update
+sudo apt install nvidia-driver-535
+sudo reboot
+装好后nvidia-smi能正常输出信息，就说明驱动OK了。‌‌
