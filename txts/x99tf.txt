@@ -1,5 +1,29 @@
 32g内存，在bios的memory选项有个POR的菜单里的第一项要改为disable
 
+第一步：先做基础状态排查
+先确认WiFi硬件和系统服务的基础状态，定位故障根源。
+执行命令 lspci | grep Network，查看系统是否能识别到无线网卡硬件。
+执行命令 rfkill list all，检查WiFi设备是否被射频软锁定，执行 sudo rfkill unblock all 解除所有锁定。
+执行命令 systemctl status NetworkManager，确认网络管理服务处于正常运行状态。
+🛡️ 第二步：关闭BIOS中的Secure Boot
+这是最常见的故障诱因，90%的同类问题都能通过这步解决。
+重启电脑，在开机自检阶段按F2/F10/Del进入BIOS/UEFI设置界面。
+找到Security选项卡，将‌Secure Boot‌选项设置为Disabled，保存设置后重启系统。
+原因：NVIDIA驱动和部分无线网卡驱动属于第三方未签名模块，Secure Boot会直接拦截其加载，连带拖慢网卡固件初始化流程。
+📦 第三步：补全缺失的内核模块包
+安装显卡驱动时apt可能自动清理了无线网卡依赖的linux-modules-extra包，直接补装即可。
+执行命令 sudo apt update，更新软件源索引。
+执行命令 sudo apt install --reinstall linux-modules-extra-$(uname -r) linux-headers-$(uname -r)，重装当前内核对应的完整扩展模块包。
+执行命令 sudo dkms autoinstall，强制DKMS工具为当前内核重新编译所有注册的驱动模块。
+📶 第四步：重装对应品牌的无线网卡驱动
+根据你的网卡品牌，针对性重装驱动，解决内核更新后的模块不兼容问题。
+‌Intel网卡‌：执行 sudo apt install --reinstall firmware-iwlwifi，重装Intel无线网卡固件。
+‌Realtek网卡‌：执行 sudo apt install --reinstall firmware-realtek，重装Realtek网卡驱动包。
+‌博通网卡‌：执行 sudo apt purge bcmwl-kernel-source && sudo apt install bcmwl-kernel-source，清理旧驱动后重新编译安装。
+🔄 第五步：重建系统固件缓存
+如果前面步骤完成后WiFi仍未恢复，执行命令 sudo update-initramfs -u，更新系统启动时的固件镜像，确保无线网卡驱动能在开机阶段正常加载，最后重启系统即可。
+
+
 UEFI+GPT配置正确，但依然黑屏（大概率是显卡驱动问题）‌
 按下面步骤操作：
 1.
