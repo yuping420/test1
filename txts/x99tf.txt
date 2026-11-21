@@ -5,6 +5,7 @@ sudo systemctl stop gdm
 黑屏后再按alt+ctl+F2进入命令行的登陆界面，登陆进行即可。（这里的F2,也可能是F3,F4,等）。
 要重回图形界面则再：
 sudo systemctl start gdm
+----- 这里的gdm可能要改为gdm3
 
 
 UEFI+GPT配置正确，但依然黑屏（大概率是显卡驱动问题）‌
