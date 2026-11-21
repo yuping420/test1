@@ -1,11 +1,12 @@
 32g内存，在bios的memory选项有个POR的菜单里的第一项要改为disable
 
-ubuntu desktop也可以进入纯命令模式：
+ubuntu desktop也可以进入纯命令行模式：
 sudo systemctl stop gdm 
 黑屏后再按alt+ctl+F2进入命令行的登陆界面，登陆进行即可。（这里的F2,也可能是F3,F4,等）。
 要重回图形界面则再：
 sudo systemctl start gdm
 ----- 这里的gdm可能要改为gdm3
+装显卡驱动的时候要进入纯命令行模式来装
 
 
 UEFI+GPT配置正确，但依然黑屏（大概率是显卡驱动问题）‌
